@@ -21,13 +21,12 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     console.log("Received message:", request);
     
     if (request.action === "addSite") {
-        blockedSites.push({[request.site]: DEFAULT_TIME_LIMIT});
         chrome.storage.sync.set({blockedSites: blockedSites});
-        console.log("Added site to blocked sites:", request.site);
+        blockedSites[request.site] = request.time
+        chrome.storage.sync.set({blockedSites: blockedSites});
+        console.log("Added site to blocked sites:", request.site, "with time limit:", request.time);
     } else if (request.action === "removeSite") {
-        Object.keys(blockedSites).filter(site => site !== request.site).forEach(key => {
-            delete blockedSites[key];
-        })
+        blockedSites = Object.keys(blockedSites).filter(site => site !== request.site);
         chrome.storage.sync.set({blockedSites: blockedSites});
         console.log("Removed site from blocked sites:", request.site);
     } else if (request.action === "setTimeLimit") {
@@ -43,7 +42,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     console.log("Tab updated:", tab);
     
-    if (changeInfo.status === 'complete' && blockedSites.some(site => tab.url.includes(site))) {
+    if (changeInfo.status === 'complete' && Object.keys(blockedSites).some(site => tab.url.includes(site))) {
         if (timers[tabId]) {
             clearTimeout(timers[tabId].redirectTimer);
             clearTimeout(timers[tabId].warningTimer);
